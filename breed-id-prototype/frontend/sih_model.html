@@ -1,0 +1,883 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Breed ID — Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* ---------- Page basics ---------- */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: #e2e2f7; /* lightest shade of purple as requested */
+      color: #213445;
+    }
+
+    /* ---------- Navbar (blue/green gradient) ---------- */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(90deg, #1e90ff, #27ae60);
+      padding: 12px 20px;
+      width: 100%;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .navbar .tabs {
+      display:flex;
+      gap:18px;
+      flex-wrap:wrap;
+    }
+    .navbar .tabs a {
+      color: white;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: all .18s ease;
+    }
+    .navbar .tabs a:hover { background: rgba(255,255,255,0.12); }
+    .navbar .tabs a.active { background: white; color: #1e90ff; }
+
+    /* login dropdown wrapper */
+    .navbar .login { position: relative; }
+    .login-btn {
+      background: white;
+      color: #1e90ff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .login-btn:hover { background: #27ae60; color: white; }
+
+    /* login dropdown menu */
+    .login-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 46px;
+      background: white;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 1500;
+    }
+    .login-menu button {
+      display: block;
+      width: 160px;
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    .login-menu button:hover { background: #f0f8ff; }
+
+    /* ---------- Layout sections ---------- */
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      margin: 18px auto;
+      padding: 0 16px;
+      box-sizing: border-box;
+    }
+    .section {
+      display: none;
+      padding: 10px 0 40px 0;
+    }
+    .section.active { display: block; }
+
+    h2 { margin: 8px 0 14px 0; color: #10304a; }
+
+    /* ---------- Camera & control area ---------- */
+    .camera-area {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    #webcam, #preview {
+      width: 100%;
+      max-width: 480px;
+      height: auto;
+      border-radius: 10px;
+      border: 2px solid #1e90ff;
+      background: #fff;
+    }
+    .controls {
+      display:flex;
+      flex-direction: column;
+      gap:10px;
+      min-width: 220px;
+    }
+    .controls .row { display:flex; gap:8px; flex-wrap:wrap; }
+    button, .controls input[type="file"] {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button.primary {
+      background: #27ae60;
+      color: white;
+    }
+    button.primary:hover { background: #1e90ff; }
+    button.ghost {
+      background: white;
+      border: 1px solid #d0e9ff;
+      color: #10304a;
+    }
+
+    /* ---------- Prediction card ---------- */
+    .pred {
+      margin-top: 16px;
+      background: white;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #e6f3ff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .pred h3 { margin: 0 0 8px 0; color: #1e90ff; }
+    .row { display:flex; justify-content:space-between; padding:8px 0; align-items:center; }
+    .prob-bar {
+      height:10px;
+      border-radius:6px;
+      background: linear-gradient(90deg,#a8ddff,#1e90ff);
+      margin-left:12px;
+      flex:1;
+      min-width:90px;
+    }
+
+    /* breed-boxes below predictions (click to expand details) */
+    #breedBoxes { margin-top:12px; display:flex; flex-direction:column; gap:10px; }
+    .breed-box {
+      padding: 14px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #e9f7ff, #f7fffb);
+      border: 2px solid rgba(30,144,255,0.14);
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease;
+      display:flex;
+      flex-direction:column;
+    }
+    .breed-box:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    .breed-box .title { font-weight:800; color:#10304a; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .breed-details {
+      margin-top:10px;
+      display:none;
+      padding:12px;
+      border-radius:8px;
+      background:#ffffff;
+      border-left:4px solid #27ae60;
+      color:#233;
+    }
+
+    /* ---------- Spinner ---------- */
+    .spinner { display:none; margin:12px 0; width:40px; height:40px; border-radius:50%; border:6px solid #f3f3f3; border-top:6px solid #1e90ff; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg);} }
+
+    /* ---------- Search & grid ---------- */
+    .search-container { position:relative; width:100%; max-width:520px; margin-bottom:14px; }
+    .search-container input {
+      width:100%; padding:10px 14px 10px 40px; border-radius:8px; border:2px solid #cfeeff; font-size:16px;
+    }
+    .search-container .icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:18px; color:#1e90ff; }
+    .breed-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap:18px;
+      margin-top:18px;
+    }
+    .breed-card {
+      background:white;
+      border-radius:12px;
+      padding:10px;
+      border:1px solid #e7f5ff;
+      box-shadow:0 4px 10px rgba(16,48,74,0.04);
+      text-align:center;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      transition: all 0.2s ease;
+    }
+    .breed-card:hover {
+      border:2px solid #1e90ff; /* glow on hover as requested */
+      box-shadow: 0 6px 16px rgba(30,144,255,0.25);
+    }
+    .breed-card img { width:100%; height:140px; object-fit:cover; border-radius:8px; }
+    .breed-card h3 { margin:6px 0 0 0; color:#1e90ff; font-size:16px; }
+    .breed-card button { margin-top:auto; background:#27ae60; color:white; padding:8px 12px; border-radius:8px; border:none; font-weight:700; cursor:pointer; }
+    .breed-card button:hover { background:#1e90ff; }
+
+    /* ---------- Modal ---------- */
+    .modal {
+      display:none;
+      position:fixed; left:0; top:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.6);
+      z-index:3000;
+      justify-content:center; align-items:center;
+      animation: fadeInBg .25s ease;
+    }
+    .modal-content {
+      width:90%; max-width:720px; max-height:80vh; overflow-y:auto;
+      background:white; border-radius:12px; padding:18px; position:relative;
+      animation: scaleIn .22s ease;
+    }
+    .modal-content h2 { margin-top: 0; color: #1e90ff; }
+    .modal-close { position:absolute; top:10px; right:14px; cursor:pointer; font-size:20px; color:#1e90ff; }
+
+    /* ---------- Responsive adjustments ---------- */
+    @media (max-width:900px) {
+      .camera-area { flex-direction:column; }
+      .controls { width:100%; }
+      .navbar { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <div class="navbar">
+    <div class="tabs">
+      <a href="#breed" class="active">Breed Recognition</a>
+      <a href="#search">Searches & Info</a>
+      <a href="#health">Health & Care</a>
+      <a href="#feedback">Feedback</a>
+      <a href="#about">About Us</a>
+    </div>
+
+    <!-- Login with dropdown -->
+    <div class="login">
+      <button id="loginToggle" class="login-btn">Login ▾</button>
+      <div id="loginMenu" class="login-menu" role="menu" aria-hidden="true">
+        <button id="menuLogin">Login</button>
+        <button id="menuSignup">Sign Up</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- BREED RECOGNITION -->
+    <section id="breed" class="section active">
+      <h2>Breed Recognition</h2>
+
+      <div class="camera-area">
+        <div>
+          <video id="webcam" autoplay playsinline muted></video>
+          <img id="preview" style="display:none; margin-top:8px;" />
+          <canvas id="hiddenCanvas" width="224" height="224" style="display:none;"></canvas>
+        </div>
+
+        <div class="controls">
+          <div class="row">
+            <button id="startCam" class="primary">📷 Start Camera</button>
+            <button id="snap" class="ghost">Capture</button>
+          </div>
+          <div class="row">
+            <input type="file" id="fileInput" accept="image/*" />
+          </div>
+          <div class="row">
+            <button id="downloadFeedback" class="ghost">Download Feedback CSV</button>
+          </div>
+
+          <div>
+            <p id="status" style="margin:6px 0 0 0;">Loading model...</p>
+            <div class="spinner" id="loadingSpinner"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pred">
+        <h3>Predictions</h3>
+        <div id="predList">No predictions yet</div>
+        <div id="breedBoxes"></div>
+
+        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="confirmBtn" class="primary" disabled>Confirm</button>
+          <button id="overrideBtn" class="ghost" disabled>Override</button>
+          <select id="overrideSelect" style="display:none; padding:8px; border-radius:6px;"></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEARCHES & INFO -->
+    <section id="search" class="section">
+      <h2>Searches & Info</h2>
+
+      <!-- Search bar with icon -->
+      <div class="search-container">
+        <span class="icon">🔍</span>
+        <input type="text" id="breedSearch" placeholder="Search for a breed..." />
+      </div>
+
+      <!-- Breed grid -->
+      <div class="breed-grid">
+        <div class="breed-card">
+          <img src="images/breed1.jpg" alt="Jersey">
+          <h3>Jersey</h3>
+          <button onclick="openModal('Jersey')">Read More</button>
+        </div>
+
+        <div class="breed-card">
+          <img src="images/breed2.jpg" alt="Brown Swiss">
+          <h3>Brown Swiss</h3>
+          <button onclick="openModal('Brown Swiss')">Read More</button>
+        </div>
+
+        <div class="breed-card">
+          <img src="images/breed3.jpg" alt="Gir">
+          <h3>Gir</h3>
+          <button onclick="openModal('Gir')">Read More</button>
+        </div>
+
+        <div class="breed-card">
+          <img src="images/breed4.jpg" alt="Murrah Buffalo">
+          <h3>Murrah Buffalo</h3>
+          <button onclick="openModal('Murrah Buffalo')">Read More</button>
+        </div>
+
+        <!-- new breeds -->
+        <div class="breed-card"><img src="images/sahiwal.jpg" alt="Sahiwal"><h3>Sahiwal</h3><button onclick="openModal('Sahiwal')">Read More</button></div>
+        <div class="breed-card"><img src="images/nimari.jpg" alt="Nimari"><h3>Nimari</h3><button onclick="openModal('Nimari')">Read More</button></div>
+        <div class="breed-card"><img src="images/nagpuri.jpg" alt="Nagpuri"><h3>Nagpuri</h3><button onclick="openModal('Nagpuri')">Read More</button></div>
+        <div class="breed-card"><img src="images/hariana.jpg" alt="Hariana"><h3>Hariana</h3><button onclick="openModal('Hariana')">Read More</button></div>
+        <div class="breed-card"><img src="images/tharparkar.jpg" alt="Tharparkar"><h3>Tharparkar</h3><button onclick="openModal('Tharparkar')">Read More</button></div>
+        <div class="breed-card"><img src="images/umblacherry.jpg" alt="Umblacherry"><h3>Umblacherry</h3><button onclick="openModal('Umblacherry')">Read More</button></div>
+        <div class="breed-card"><img src="images/amritmahal.jpg" alt="Amritmahal"><h3>Amritmahal</h3><button onclick="openModal('Amritmahal')">Read More</button></div>
+      </div>
+    </section>
+
+    <!-- HEALTH -->
+    <section id="health" class="section">
+      <h2>Health & Care</h2>
+      <p>Here you can add animal health and care details in future (vaccination schedule, diseases, nutrition tips, etc.).</p>
+    </section>
+
+    <!-- FEEDBACK -->
+    <section id="feedback" class="section">
+      <h2>Feedback</h2>
+      <p>Use this section for FLW feedback, bug reports, or dataset improvement suggestions. The site already saves confirm/override events locally and lets you download CSV.</p>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="section">
+      <h2>About Us</h2>
+      <p>
+        Breed ID is developed under the Smart India Hackathon to support Field Level Workers (FLWs) in accurate cattle and buffalo breed recognition.
+        Our mission is to bridge the gap between technology and traditional livestock management by leveraging Artificial Intelligence and image analysis.
+        The platform not only identifies breeds but also provides rich, contextual knowledge about them, helping farmers and veterinarians in daily decision-making.
+        We aim to empower rural communities with digital tools that improve efficiency, reduce errors, and enhance animal well-being across the livestock value chain.
+        Accessibility and usability are central: FLWs with minimal training can use this system in the field to improve data quality and decision-making.
+      </p>
+
+      <p>
+        Looking ahead, Breed ID will expand into a comprehensive livestock-care assistant — integrating health tracking, vaccination reminders, and nutrition guidance.
+        Sustainability guides our development: we focus on solutions that optimize resources, promote healthy breeding practices, and enhance genetic improvement programs.
+        Continuous feedback from FLWs will make the model more robust and the database more representative of India's diversity of breeds.
+        Through partnerships with agricultural extension services and veterinary networks, the platform aims to be a practical tool for on-ground improvements.
+        Ultimately, we want AI to tangibly improve livestock productivity, farmer livelihoods, and animal welfare across India.
+      </p>
+    </section>
+  </div>
+
+  <!-- Breed Modal -->
+  <div id="breedModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal()">&times;</span>
+      <h2 id="modalTitle">Breed Name</h2>
+      <div id="modalDetails" style="line-height:1.6;"></div>
+    </div>
+  </div>
+
+  <!-- Teachable Machine & app scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
+  <script>
+    // ---------------- UI: login dropdown ----------------
+    const loginToggle = document.getElementById('loginToggle');
+    const loginMenu = document.getElementById('loginMenu');
+    const menuLogin = document.getElementById('menuLogin');
+    const menuSignup = document.getElementById('menuSignup');
+
+    loginToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      loginMenu.style.display = loginMenu.style.display === 'block' ? 'none' : 'block';
+      loginMenu.setAttribute('aria-hidden', loginMenu.style.display !== 'block');
+    });
+
+    // close on outside click
+    document.addEventListener('click', (e) => {
+      if (!loginMenu.contains(e.target) && e.target !== loginToggle) {
+        loginMenu.style.display = 'none';
+        loginMenu.setAttribute('aria-hidden', 'true');
+      }
+    });
+
+    // placeholder handlers for login/signup
+    menuLogin.addEventListener('click', () => {
+  loginMenu.style.display = 'none';
+  window.location.href = "login.html"; // create this page
+});
+
+menuSignup.addEventListener('click', () => {
+  loginMenu.style.display = 'none';
+  window.location.href = "signup.html"; // create this page
+});
+
+
+    function showLoginMock(mode) {
+      // build login content; mode = 'password' or 'otp' — user will add images later
+      const title = mode === 'password' ? 'Login with Password' : 'Login with OTP';
+      const html = `<h2>${title}</h2>
+        <p>This is a login mockup (you will add the real UI later).</p>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+          <input placeholder="Phone or Email" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+          ${mode === 'password' ? '<input placeholder="Password" type="password" style="padding:8px;border-radius:6px;border:1px solid #ddd;">' : '<input placeholder="Enter OTP" style="padding:8px;border-radius:6px;border:1px solid #ddd;">'}
+          <div style="display:flex;gap:8px;"><button onclick="closeModal()" style="background:#1e90ff;color:white;padding:8px 12px;border-radius:6px;border:none;">Close</button></div>
+        </div>`;
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modalDetails').innerHTML = html;
+      document.getElementById('breedModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function showSignupMock() {
+      const html = `<h2>Sign Up</h2>
+        <p>This is a signup mockup (you will add the real UI later).</p>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+          <input placeholder="Full name" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+          <input placeholder="Phone or Email" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+          <input placeholder="Password" type="password" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+          <div style="display:flex;gap:8px;"><button onclick="closeModal()" style="background:#27ae60;color:white;padding:8px 12px;border-radius:6px;border:none;">Close</button></div>
+        </div>`;
+      document.getElementById('modalTitle').innerText = 'Sign Up';
+      document.getElementById('modalDetails').innerHTML = html;
+      document.getElementById('breedModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    /* ------------------ UI: tabs ------------------ */
+const tabs = document.querySelectorAll(".navbar .tabs a");
+const sections = document.querySelectorAll(".section");
+tabs.forEach(tab => {
+  tab.addEventListener("click", (e) => {
+    e.preventDefault();
+    const target = tab.getAttribute("href").substring(1);
+
+    // Hide all sections
+    sections.forEach(s => s.classList.remove("active"));
+
+    // Show the clicked section
+    document.getElementById(target).classList.add("active");
+
+    // Update tab styles
+    tabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+
+    // Optional: scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+    // ---------------- MODEL & PREDICTION ----------------
+    const MODEL_URL = "./model/";
+    let model, maxPredictions;
+
+    const video = document.getElementById('webcam');
+    const preview = document.getElementById('preview');
+    const canvas = document.getElementById('hiddenCanvas');
+    const ctx = canvas.getContext('2d');
+    const predList = document.getElementById('predList');
+    const status = document.getElementById('status');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const overrideBtn = document.getElementById('overrideBtn');
+    const overrideSelect = document.getElementById('overrideSelect');
+    const spinner = document.getElementById('loadingSpinner');
+    const feedbackKey = "breedid_feedback_v1";
+
+    async function init() {
+      status.innerText = "Loading model...";
+      spinner.style.display = "block";
+      try {
+        // load teachable machine model
+        model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+        maxPredictions = model.getTotalClasses();
+
+        // prepare override select with model labels
+        overrideSelect.innerHTML = [...Array(maxPredictions).keys()].map(i =>
+          `<option value="${model.getClassLabel(i)}">${model.getClassLabel(i)}</option>`
+        ).join('');
+
+        status.innerText = "Model loaded ✅";
+      } catch (err) {
+        console.error("Model load failed:", err);
+        status.innerText = "Model load failed. Check console.";
+      } finally {
+        spinner.style.display = "none";
+      }
+    }
+    init();
+
+    // ---------- Camera start with better permission handling ----------
+    document.getElementById('startCam').onclick = async () => {
+      // Request camera permission with two attempts: constrained (environment) then default
+      status.innerText = "Requesting camera...";
+      try {
+        // try facingMode 'environment' first (mobile rear camera)
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
+        attachStreamToVideo(stream);
+        status.innerText = "Camera started";
+      } catch (err1) {
+        console.warn("Environment facingMode failed:", err1);
+        try {
+          // fallback: ask for any camera
+          const stream2 = await navigator.mediaDevices.getUserMedia({ video: true });
+          attachStreamToVideo(stream2);
+          status.innerText = "Camera started (default)";
+        } catch (err2) {
+          console.error("Camera access denied or not available:", err2);
+          status.innerText = "Camera access denied or unavailable.";
+          // show helpful instructions modal for permission enabling
+          const html = `<h2>Camera Access Needed</h2>
+            <p>We couldn't access your camera. To use live breed recognition you must allow camera access.</p>
+            <p>Steps you can try:</p>
+            <ol>
+              <li>Make sure you opened this page over HTTPS (or localhost).</li>
+              <li>Check your browser's site permissions and allow the camera.</li>
+              <li>If using Chrome, click the camera icon in the address bar and allow permission.</li>
+              <li>Reload the page after changing permissions.</li>
+            </ol>
+            <div style="margin-top:8px;"><button onclick="closeModal()" style="background:#1e90ff;color:white;padding:8px;border-radius:6px;border:none;">Close</button></div>`;
+          document.getElementById('modalTitle').innerText = 'Camera Permission';
+          document.getElementById('modalDetails').innerHTML = html;
+          document.getElementById('breedModal').style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+        }
+      }
+    };
+
+    function attachStreamToVideo(stream) {
+      // stop existing tracks if present to avoid multiple camera holds
+      try {
+        const oldStream = video.srcObject;
+        if (oldStream) {
+          oldStream.getTracks().forEach(t => t.stop());
+        }
+      } catch (e) { /* ignore */ }
+
+      video.srcObject = stream;
+      video.style.display = 'block';
+      preview.style.display = 'none';
+      status.innerText = "Camera live — press Capture";
+    }
+
+    // capture from camera
+    document.getElementById('snap').onclick = async () => {
+      if (video && video.srcObject) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        showPreview(canvas.toDataURL());
+        await predict(canvas);
+      } else {
+        alert("Start camera first or use file upload.");
+      }
+    };
+
+    // file input handling
+    document.getElementById('fileInput').onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        showPreview(ev.target.result);
+        const img = new Image();
+        img.onload = async () => {
+          // draw to canvas at required size
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          await predict(canvas);
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+
+    function showPreview(src) {
+      preview.src = src;
+      preview.style.display = 'block';
+      video.style.display = 'none';
+    }
+
+    // ---------------- Prediction ----------------
+    async function predict(source) {
+      if (!model) {
+        alert("Model not loaded yet.");
+        return;
+      }
+      spinner.style.display = "block";
+      status.innerText = "Predicting...";
+      try {
+        const preds = await model.predict(source);
+        preds.sort((a, b) => b.probability - a.probability);
+
+        // show top 3 inline summary
+        predList.innerHTML = preds.slice(0, 3).map(p =>
+          `<div class="row"><div style="font-weight:800">${p.className}</div><div>${(p.probability * 100).toFixed(2)}%</div></div>`
+        ).join('');
+
+        // clickable breed boxes (top3)
+        const breedBoxes = document.getElementById("breedBoxes");
+        breedBoxes.innerHTML = preds.slice(0, 3).map((p, i) => {
+          return `
+            <div class="breed-box" data-name="${p.className}" onclick="toggleBreedDetails(this)">
+              <div class="title">
+                <span>${p.className}</span>
+                <span style="font-weight:700;color:#0b3b66">${(p.probability * 100).toFixed(2)}%</span>
+              </div>
+              <div id="breed-details-inline-${i}" class="breed-details">
+                <div><b>Quick info:</b> ${truncateText(breedDetails[p.className] || "Details coming soon.", 160)}</div>
+                <div style="margin-top:8px;">
+                  <button class="ghost" style="background:#1e90ff;color:white;padding:6px 8px;border-radius:6px;border:none;font-weight:700;" onclick="openModalFromPrediction(event,'${p.className}')">Read more</button>
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+
+        // enable confirm and override
+        confirmBtn.disabled = false;
+        overrideBtn.disabled = false;
+
+        // store last prediction for feedback
+        window._lastPrediction = { top3: preds.slice(0, 3), img: source.toDataURL?.() || null, time: new Date().toISOString() };
+
+        status.innerText = "Prediction complete ✅";
+      } catch (err) {
+        console.error("Prediction error:", err);
+        status.innerText = "Prediction error. See console.";
+      } finally {
+        spinner.style.display = "none";
+      }
+    }
+
+    function truncateText(html, n) {
+      // crude truncation from plain text fallback for inline preview
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const text = tmp.innerText || tmp.textContent || "";
+      if (text.length <= n) return text;
+      return text.slice(0, n) + "...";
+    }
+
+    // toggle inline details inside breedBox
+    function toggleBreedDetails(el) {
+      let box = el;
+      if (!box.classList.contains('breed-box')) box = el.closest('.breed-box');
+      const details = box.querySelector('.breed-details');
+      details.style.display = (details.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function openModalFromPrediction(ev, breedName) {
+      ev.stopPropagation();
+      openModal(breedName);
+    }
+
+    // Confirm / override flows
+   confirmBtn.onclick = () => {
+  if (!window._lastPrediction) return;
+
+  // If user already chose an override, use that
+  const chosen = window._lastPrediction.overrideChoice
+    ? window._lastPrediction.overrideChoice
+    : window._lastPrediction.top3[0].className;
+
+  saveFeedback({ action: "confirm", chosen });
+  status.innerText = `Confirmed: ${chosen}`;
+
+  const breedBoxes = document.getElementById("breedBoxes");
+  breedBoxes.innerHTML = `
+    <div class="breed-box">
+      <div class="title"><span>${chosen}</span><span style="font-weight:700;color:#0b3b66">Confirmed</span></div>
+      <div class="breed-details" style="display:block;">${breedDetails[chosen] || "Details coming soon."}</div>
+    </div>
+  `;
+  openModal(chosen);
+};
+
+
+    overrideBtn.onclick = () => {
+      // show override select — user selects breed manually
+      overrideSelect.style.display = 'inline-block';
+      // ensure options are available; if model not loaded yet populate with breedDetails keys
+      if (!overrideSelect.options.length) {
+        const keys = Object.keys(breedDetails);
+        overrideSelect.innerHTML = keys.map(k => `<option value="${k}">${k}</option>`).join('');
+      }
+      overrideSelect.focus();
+
+      // when user picks a value, save override and show info
+      overrideSelect.onchange = () => {
+        const chosen = overrideSelect.value;
+        window._lastPrediction.overrideChoice = chosen; // store override
+
+        if (!chosen) return;
+        saveFeedback({ action: "override", chosen });
+        status.innerText = `Overridden to: ${chosen}`;
+        // close select
+        overrideSelect.style.display = 'none';
+        // show the chosen breed info inline and open modal for details
+        const breedBoxes = document.getElementById("breedBoxes");
+        breedBoxes.innerHTML = `
+          <div class="breed-box">
+            <div class="title"><span>${chosen}</span><span style="font-weight:700;color:#0b3b66">Overridden</span></div>
+            <div class="breed-details" style="display:block;">${breedDetails[chosen] || "Details coming soon."}</div>
+          </div>
+        `;
+        openModal(chosen);
+      };
+    };
+
+    function saveFeedback(entry) {
+      const data = JSON.parse(localStorage.getItem(feedbackKey) || '[]');
+      data.push({ ...entry, ...window._lastPrediction });
+      localStorage.setItem(feedbackKey, JSON.stringify(data));
+    }
+
+    document.getElementById('downloadFeedback').onclick = () => {
+      const data = JSON.parse(localStorage.getItem(feedbackKey) || '[]');
+      if (!data.length) return alert("No feedback yet");
+      const rows = [["time","action","chosen","top1","prob1","top2","prob2","top3","prob3"]];
+      data.forEach(e => {
+        rows.push([e.time,e.action,e.chosen,
+          e.top3?.[0]?.className || "", ((e.top3?.[0]?.probability||0)*100).toFixed(2),
+          e.top3?.[1]?.className || "", ((e.top3?.[1]?.probability||0)*100).toFixed(2),
+          e.top3?.[2]?.className || "", ((e.top3?.[2]?.probability||0)*100).toFixed(2)]);
+      });
+      const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(",")).join("\n");
+      const blob = new Blob([csv], {type:"text/csv"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "feedback.csv"; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // ------------------ Breed details for modals ------------------
+    const breedDetails = {
+      "Jersey":
+        `<p><strong>Origin & history:</strong> Jersey cattle originate from the Isle of Jersey (English Channel). They have been bred for rich, creamy milk and were exported worldwide in the 19th and 20th centuries.</p>
+         <p><strong>Physical & production traits:</strong> Small-to-medium size, light brown coat; known for high butterfat and protein in milk, efficient feed-to-milk conversion.</p>
+         <p><strong>Adaptation & management:</strong> Adaptable to a variety of climates; do well in smallholder systems and intensive dairy operations alike.</p>
+         <p><strong>Uses & value:</strong> Ideal for dairy farmers focused on quality milk products (butter, cheese); calm temperament helps in handling.</p>`,
+
+      "Brown Swiss":
+        `<p><strong>Origin & history:</strong> Brown Swiss is one of the oldest dairy breeds, originating in the Swiss Alps where durability and milk quality were essential.</p>
+         <p><strong>Physical & production traits:</strong> Large-bodied, grey-brown coat; known for balanced milk composition and steady yields over a long lifespan.</p>
+         <p><strong>Adaptation & management:</strong> Hardy and long-living; strong feet and legs, suitable for varied climates and grazing systems.</p>
+         <p><strong>Uses & value:</strong> Excellent for cheese production and farmers who value longevity and balanced milk components.</p>`,
+
+      "Gir":
+        `<p><strong>Origin & history:</strong> Gir is an indigenous zebu cattle breed from Gujarat, India, historically prized for milk and resilience under local conditions.</p>
+         <p><strong>Physical & production traits:</strong> Distinctive convex forehead and pendulous ears; produces rich milk with good solids content.</p>
+         <p><strong>Adaptation & management:</strong> Highly tolerant to heat and resistant to many local diseases; frequently used in cross-breeding to improve tropically adapted dairy herds.</p>
+         <p><strong>Uses & value:</strong> Important for smallholder dairy systems and breeding programs aiming to combine resilience with milk quality.</p>`,
+
+      "Murrah Buffalo":
+        `<p><strong>Origin & history:</strong> Murrah is a premier river buffalo breed from Haryana/Punjab region in India, developed for high milk production.</p>
+         <p><strong>Physical & production traits:</strong> Jet-black coat, tightly curled horns; among the highest milk-yielding buffalo breeds with rich fat content.</p>
+         <p><strong>Adaptation & management:</strong> Well-suited to hot, humid conditions; commonly reared in dairies for both household and commercial milk supply.</p>
+         <p><strong>Uses & value:</strong> Central to the buffalo dairy industry — prized for milk fat and value-added dairy products like ghee and paneer.</p>`,
+
+      "Sahiwal":
+        `<p><strong>Origin & history:</strong> Sahiwal is a major dairy breed from the Punjab region (now India/Pakistan), historically reared in arid and semi-arid zones.</p>
+         <p><strong>Physical & production traits:</strong> Reddish-brown coat; known for heat tolerance and high-quality milk, particularly under tropical conditions.</p>
+         <p><strong>Adaptation & management:</strong> Thrives in hot climates with limited resources; tolerant of parasites and heat stress.</p>
+         <p><strong>Uses & value:</strong> Valuable for smallholder systems where resilience and reliable milk production are required; used in crossbreeding programs too.</p>`,
+
+      "Nimari":
+        `<p><strong>Origin & history:</strong> Nimari is a local dual-purpose breed from central India adapted to regional agro-climatic conditions.</p>
+         <p><strong>Physical & production traits:</strong> Medium size; used both for draft and for moderate milk yield in rural households.</p>
+         <p><strong>Adaptation & management:</strong> Hardy and adapted to local fodder types and seasonal variations.</p>
+         <p><strong>Uses & value:</strong> Suitable for farmers needing multi-purpose animals — draft power and home-consumption milk supply.</p>`,
+
+      "Nagpuri":
+        `<p><strong>Origin & history:</strong> Nagpuri cattle and buffalo types originate in Maharashtra and are adapted to semi-arid regions.</p>
+         <p><strong>Physical & production traits:</strong> Sturdy build and drought-tolerant physiology; moderate milk yield depending on management.</p>
+         <p><strong>Adaptation & management:</strong> Highly drought-resistant and good at utilizing sparse grazing; survives well on marginal lands.</p>
+         <p><strong>Uses & value:</strong> Useful for farmers in semi-arid zones; valued for resilience and low-input maintenance.</p>`,
+
+      "Hariana":
+        `<p><strong>Origin & history:</strong> Hariana cattle are from Haryana, India — traditionally used as both draft and dairy animals.</p>
+         <p><strong>Physical & production traits:</strong> Medium to large body; moderate milk yield and good strength for work.</p>
+         <p><strong>Adaptation & management:</strong> Perform well in the northern Indian plains; robust under farm conditions where draft work is needed.</p>
+         <p><strong>Uses & value:</strong> Historically important for draft and transport; still used where multi-purpose animals are preferred.</p>`,
+
+      "Tharparkar":
+        `<p><strong>Origin & history:</strong> Tharparkar cattle originate from the Thar desert region and are famed for survival in arid climates.</p>
+         <p><strong>Physical & production traits:</strong> Dual-purpose with respectable milk yields and draft capability; tolerant to heat and scarce water.</p>
+         <p><strong>Adaptation & management:</strong> Extremely hardy; can subsist on poor-quality forage and withstand harsh climatic conditions.</p>
+         <p><strong>Uses & value:</strong> Suitable in arid and semi-arid zones where resilience is prioritized alongside milk production.</p>`,
+
+      "Umblacherry":
+        `<p><strong>Origin & history:</strong> Umbalacherry (Umblacherri) is a south Indian draft breed historically used in Tamil Nadu for agricultural work.</p>
+         <p><strong>Physical & production traits:</strong> Medium-sized with endurance; not primarily a high-milk breed but valued for its strength.</p>
+         <p><strong>Adaptation & management:</strong> Well-suited to hot coastal climates and saline conditions in parts of southern India.</p>
+         <p><strong>Uses & value:</strong> Important for draft applications and smallholder farms where resilience and endurance are required.</p>`,
+
+      "Amritmahal":
+        `<p><strong>Origin & history:</strong> Amritmahal is a draught breed from Karnataka with historical importance for heavy work and transport.</p>
+         <p><strong>Physical & production traits:</strong> Strong-bodied and hardy; used historically for heavy draught tasks.</p>
+         <p><strong>Adaptation & management:</strong> Suited to rough terrain and long working hours; requires appropriate nutrition to realize strength.</p>
+         <p><strong>Uses & value:</strong> Still valuable where draught power is needed and for maintaining traditional agricultural practices.</p>`
+    };
+
+    // --------------- Modal open/close ---------------
+    function openModal(breedName) {
+      document.getElementById("modalTitle").innerText = breedName;
+      document.getElementById("modalDetails").innerHTML = breedDetails[breedName] || "<p>Details coming soon.</p>";
+      document.getElementById("breedModal").style.display = "flex";
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+      document.getElementById("breedModal").style.display = "none";
+      document.body.style.overflow = "auto";
+    }
+
+    window.onclick = function(event) {
+      if (event.target === document.getElementById("breedModal")) {
+        closeModal();
+      }
+    };
+
+    // --------------- Search filter ---------------
+    const searchInput = document.getElementById("breedSearch");
+    const breedCards = document.querySelectorAll(".breed-card");
+    searchInput.addEventListener("input", function() {
+      const q = this.value.trim().toLowerCase();
+      breedCards.forEach(card => {
+        const name = card.querySelector("h3").innerText.toLowerCase();
+        card.style.display = name.includes(q) ? "flex" : "none";
+      });
+    });
+
+    // Accessibility: allow switching login mockups between password/otp when user clicks login menu
+    // (We already wired menuLogin to show password mockup; to show OTP version user can call showLoginMock('otp'))
+
+    // End of script
+  </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Login — Breed ID</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f9f9ff; /* clean background */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 380px;
+    }
+    h2 { margin-top: 0; color: #1e90ff; }
+    .form-group { margin-bottom: 15px; }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #1e90ff;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #27ae60; }
+    .alt { margin-top: 12px; font-size: 14px; text-align: center; }
+    .alt a { color: #1e90ff; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>Login to Continue</h2>
+    <form>
+      <div class="form-group">
+        <input type="text" placeholder="Mobile No. / Email ID" required>
+      </div>
+      <div class="form-group">
+        <input type="password" placeholder="Password" required>
+      </div>
+      <button type="submit">Log In</button>
+    </form>
+    <div class="alt">
+      Don’t have an account? <a href="signup.html">Register</a>
+    </div>
+  </div>
+</body>
+</html>
